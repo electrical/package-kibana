@@ -2,37 +2,43 @@
 
 basedir=`pwd`
 
+# centos or debian
 os=$1
+# your name
 maintainer=$2
 
 if [[ $os == "centos" ]]; then
 
-rm -rf $basedir/build_root_centos/*
+  # Create required directories
+  mkdir -p $basedir/build_root_centos/usr/local
+  mkdir -p $basedir/build_root_centos/etc/rc.d/init.d
+  mkdir -p $basedir/build_root_centos/etc/sysconfig
 
-mkdir -p $basedir/build_root_centos/usr/local
-mkdir -p $basedir/build_root_centos/etc/rc.d/init.d
-mkdir -p $basedir/build_root_centos/etc/sysconfig
+  # Fetch the latest code, build the libraries and
+  # remove files we don't need
+  cd $basedir/build_root_centos/usr/local
+  git clone https://github.com/rashidkpc/Kibana.git ./kibana
+  cd kibana
+  bundle install --deployment
+  rm -rf .git .travis.yml .gitignore
 
-cd $basedir/build_root_centos/usr/local
+  # Copy the init file and make it executable
+  cd $basedir/build_root_centos/etc/rc.d/init.d
+  cp $basedir/kibana.init.centos ./kibana
+  chmod a+rx kibana
 
-git clone https://github.com/rashidkpc/Kibana.git ./kibana
-cd kibana
-bundle install --deployment
-rm -rf .git .travis.yml .gitignore
+  # Copy the default file
+  cd $basedir/build_root_centos/etc/sysconfig
+  cp $basedir/kibana.sysconfig.centos ./kibana
 
-cd $basedir/build_root_centos/etc/rc.d/init.d
-cp $basedir/kibana.init.centos ./kibana
-chmod a+rx kibana
+  # Ensure everythign has the correct settings
+  cd $basedir/build_root_centos
+  find . -type d -exec chmod a+rx {} \;
+  find . -type f -exec chmod a+r {} \;
 
-cd $basedir/build_root_centos/etc/sysconfig
-cp $basedir/kibana.sysconfig.centos ./kibana
-
-cd $basedir/build_root_centos
-find . -type d -exec chmod a+rx {} \;
-find . -type f -exec chmod a+r {} \;
-
-cd $basedir
-fpm -s dir \
+  # Lets build the package
+  cd $basedir
+  fpm -s dir \
     -t rpm \
     -n kibana \
     -v 0.2.0 \
@@ -49,33 +55,41 @@ fpm -s dir \
     --rpm-group 'root' \
     -C build_root_centos .
 
-rm -rf $basedir/build_root_centos
+  # Clean up the build directory
+  rm -rf $basedir/build_root_centos
 
 elif [[ $os == "debian" ]]; then
 
-mkdir -p $basedir/build_root_debian/usr/local
-mkdir -p $basedir/build_root_debian/etc/init.d
-mkdir -p $basedir/build_root_debian/etc/default
+  # Create required directories
+  mkdir -p $basedir/build_root_debian/usr/local
+  mkdir -p $basedir/build_root_debian/etc/init.d
+  mkdir -p $basedir/build_root_debian/etc/default
 
-cd $basedir/build_root_debian/usr/local
-git clone git://github.com/rashidkpc/Kibana.git ./kibana
-cd kibana
-bundle install --deployment
-rm -rf .git .travis.yml .gitignore
+  # Fetch the latest code, build the libraries and
+  # remove files we don't need
+  cd $basedir/build_root_debian/usr/local
+  git clone git://github.com/rashidkpc/Kibana.git ./kibana
+  cd kibana
+  bundle install --deployment
+  rm -rf .git .travis.yml .gitignore
 
-cd $basedir/build_root_debian/etc/init.d
-cp $basedir/kibana.init.debian ./kibana
-chmod a+rx kibana
+  # Copy the init file and make it executable
+  cd $basedir/build_root_debian/etc/init.d
+  cp $basedir/kibana.init.debian ./kibana
+  chmod a+rx kibana
 
-cd $basedir/build_root_debian/etc/default
-cp $basedir/kibana.default.debian ./kibana
+  # Copy the default file
+  cd $basedir/build_root_debian/etc/default
+  cp $basedir/kibana.default.debian ./kibana
 
-cd $basedir/build_root_debian
-find . -type d -exec chmod a+rx {} \;
-find . -type f -exec chmod a+r {} \;
+  # Ensure everythign has the correct settings
+  cd $basedir/build_root_debian
+  find . -type d -exec chmod a+rx {} \;
+  find . -type f -exec chmod a+r {} \;
 
-cd $basedir
-fpm -s dir \
+  # Lets build the package
+  cd $basedir
+  fpm -s dir \
     -t deb \
     -n kibana \
     -v 0.2.0 \
@@ -85,13 +99,13 @@ fpm -s dir \
     --description 'Kibana is a web interface for Logstash.' \
     --url 'http://kibana.org' \
     --vendor 'Kibana.Org' \
-    --maintainer "Richard Pijnenburg" \
+    --maintainer "$maintainer" \
     -d 'ruby' \
     --deb-user 'root' \
     --deb-group 'root' \
     -C build_root_debian .
 
-rm -rf $basedir/build_root_debian
-
+  # Clean up the build directory
+  rm -rf $basedir/build_root_debian
 
 fi
