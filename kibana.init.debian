@@ -1,0 +1,128 @@
+#!/bin/bash
+#
+# /etc/init.d/kibana -- startup script for Kibana.
+#
+#
+### BEGIN INIT INFO
+# Provides:          kibana
+# Required-Start:    $all
+# Required-Stop:     $all
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: Starts kibana
+# Description:       Starts kibana using start-stop-daemon
+### END INIT INFO
+
+set -e
+
+PATH=/bin:/usr/bin:/sbin:/usr/sbin
+NAME=kibana
+DESC="Kibana frontend"
+DEFAULT=/etc/default/$NAME
+
+if [ `id -u` -ne 0 ]; then
+   echo "You need root privileges to run this script"
+   exit 1
+fi
+
+. /lib/lsb/init-functions
+
+if [ -r /etc/default/rcS ]; then
+   . /etc/default/rcS
+fi
+
+# The following variables can be overwritten in $DEFAULT
+
+# Run logstash as this user ID and group ID
+#LS_USER=logstash
+#LS_GROUP=adm
+
+#export JAVA_HOME=/usr/lib/jvm/default-java
+
+# Directory where the logstash all in one jar lives
+KIBANA_HOME=/usr/local/kibana
+
+# Additional Java OPTS
+#LS_JAVA_OPTS=
+
+# logstash log directory
+#LOG_DIR=/var/log
+
+# logstash configuration directory
+#CONF_DIR=/etc/logstash/conf.d
+
+# logstash log file
+#LOG_FILE=$LOG_DIR/logstash.log
+
+# End of variables that can be overwritten in $DEFAULT
+
+# overwrite settings from default file
+if [ -f "$DEFAULT" ]; then
+   . "$DEFAULT"
+fi
+
+# Define other required variables
+PID_DIR=/var/run
+export PID_DIR=$PID_DIR
+export GEM_PATH="$KIBANA_HOME/vendor/bundle/ruby/1.*"
+DAEMON_OPTS="$KIBANA_HOME/kibana-daemon.rb"
+DAEMON="/usr/bin/env ruby"
+CONFIG="$KIBANA_HOME/KibanaConfig.rb"
+PID_FILE=$PID_DIR/kibana.rb.pid
+
+case "$1" in
+   start)
+     log_daemon_msg "Starting $DESC"
+     # Start Daemon
+     start-stop-daemon --start -b -d "$KIBANA_HOME" --pidfile "$PID_FILE" --exec "$DAEMON $DAEMON_OPTS start"
+     if  [[ $? -eq 0 ]]; then
+       log_end_msg 0
+     fi
+   ;;    
+   stop)
+      log_daemon_msg "Stopping $DESC"
+
+      set +e
+
+      if [ -f "$PID_FILE" ]; then 
+
+        start-stop-daemon --start -b -d "$KIBANA_HOME" --pidfile "$PID_FILE" --exec "$DAEMON $DAEMON_OPTS stop"
+         if [ $? -eq 1 ]; then
+            log_progress_msg "$DESC is not running but pid file exists, cleaning up"
+         elif [ $? -eq 3 ]; then
+            PID="`cat $PID_FILE`"
+            log_failure_msg "Failed to stop $DESC (pid $PID)"
+            exit 1
+         fi
+
+         rm -f "$PID_FILE"
+      else
+         log_progress_msg "(not running)"
+      fi
+
+      log_end_msg 0
+      set -e
+   ;;
+   status)
+      set +e
+
+      start-stop-daemon --start -b -d "$KIBANA_HOME" --pidfile "$PID_FILE" --exec "$DAEMON $DAEMON_OPTS status"
+
+      set -e
+   ;;
+   restart|force-reload)
+      if [ -f "$PID_FILE" ]; then
+         $0 stop
+         sleep 1
+      fi
+
+      $0 start
+   ;;
+   *)
+      log_success_msg "Usage: $0 {start|stop|restart|force-reload|status}"
+      exit 1
+   ;;
+esac
+
+exit 0
+

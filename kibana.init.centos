@@ -1,0 +1,87 @@
+#!/bin/sh
+#
+# kibana    Web interface to Logstash.
+#
+# chkconfig:   - 85 15
+# description: Kibana is a web interface to Logstash.
+
+### BEGIN INIT INFO
+# Provides: kibana
+# Required-Start: $all
+# Required-Stop: $all
+# Default-Start: 
+# Default-Stop: 0 1 6
+# Short-Description: Kibana
+# Description: Kibana is a web interface to Logstash.
+### END INIT INFO
+
+# Source function library.
+. /etc/rc.d/init.d/functions
+
+prog="kibana"
+
+[ -e /etc/sysconfig/$prog ] && . /etc/sysconfig/$prog
+
+if [ "x$KIBANA_HOME" == "x" ]; then
+    KIBANA_HOME="/usr/local/kibana"
+fi
+
+PID_DIR=${PID_DIR:-'/var/run'}
+export $PID_DIR
+export GEM_PATH="$KIBANA_HOME/vendor/bundle/ruby/1.*"
+bin="$KIBANA_HOME/kibana-daemon.rb"
+exec="/usr/bin/env ruby $bin"
+config="$KIBANA_HOME/KibanaConfig.rb"
+lockfile=/var/lock/subsys/$prog
+
+start() {
+    [ -e $bin ] || exit 5
+    [ -f $config ] || exit 6
+    echo -n $"Starting $prog: "
+    cd $KIBANA_HOME
+    daemon $exec start &
+    retval=$?
+    echo
+    [ $retval -eq 0 ] && touch $lockfile
+    return $retval
+}
+
+stop() {
+    echo -n $"Stopping $prog: "
+    cd $KIBANA_HOME
+    daemon $exec stop
+    retval=$?
+    echo
+    [ $retval -eq 0 ] && rm -f $lockfile && rm -rf $KIBANA_HOME/tmp/kibana.rb.pid
+    return $retval
+}
+
+status() {
+    cd $KIBANA_HOME
+    $exec status
+}
+
+
+restart() {
+    stop
+    start
+}
+
+case "$1" in
+    start)
+        $1
+        ;;
+    stop)
+        $1
+        ;;
+    restart)
+        $1
+        ;;
+    status)
+        $1
+        ;;
+    *)
+        echo $"Usage: $0 {start|stop|status|restart}"
+        exit 2
+esac
+exit $?
