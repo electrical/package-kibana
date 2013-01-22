@@ -3,6 +3,7 @@
 basedir=`pwd`
 
 os=$1
+maintainer=$2
 
 if [[ $os == "centos" ]]; then
 
@@ -14,7 +15,7 @@ mkdir -p $basedir/build_root_centos/etc/sysconfig
 
 cd $basedir/build_root_centos/usr/local
 
-git clone git://github.com/rashidkpc/Kibana.git ./kibana
+git clone https://github.com/rashidkpc/Kibana.git ./kibana
 cd kibana
 bundle install --deployment
 rm -rf .git .travis.yml .gitignore
@@ -42,7 +43,7 @@ fpm -s dir \
     --description 'Kibana is a web interface for Logstash.' \
     --url 'http://kibana.org' \
     --vendor 'Kibana.Org' \
-    --maintainer "Richard Pijnenburg" \
+    --maintainer "$maintainer" \
     -d 'ruby' \
     --rpm-user 'root' \
     --rpm-group 'root' \
