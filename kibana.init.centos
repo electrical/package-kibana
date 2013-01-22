@@ -57,8 +57,15 @@ stop() {
 }
 
 status() {
+    retval=0
     cd $KIBANA_HOME
-    $exec status
+    STATUS=`$exec status`
+    echo $STATUS
+    echo $STATUS | grep -q 'no instances'
+    if [ $? == 0 ]; then
+        retval=1
+    fi
+    return $retval
 }
 
 
