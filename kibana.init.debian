@@ -33,26 +33,7 @@ fi
 
 # The following variables can be overwritten in $DEFAULT
 
-# Run logstash as this user ID and group ID
-#LS_USER=logstash
-#LS_GROUP=adm
-
-#export JAVA_HOME=/usr/lib/jvm/default-java
-
-# Directory where the logstash all in one jar lives
-KIBANA_HOME=/usr/local/kibana
-
-# Additional Java OPTS
-#LS_JAVA_OPTS=
-
-# logstash log directory
-#LOG_DIR=/var/log
-
-# logstash configuration directory
-#CONF_DIR=/etc/logstash/conf.d
-
-# logstash log file
-#LOG_FILE=$LOG_DIR/logstash.log
+PID_DIR=/var/run
 
 # End of variables that can be overwritten in $DEFAULT
 
@@ -62,7 +43,7 @@ if [ -f "$DEFAULT" ]; then
 fi
 
 # Define other required variables
-PID_DIR=/var/run
+KIBANA_HOME=/usr/local/kibana
 export PID_DIR=$PID_DIR
 export GEM_PATH="$KIBANA_HOME/vendor/bundle/ruby/1.*"
 DAEMON_OPTS="$KIBANA_HOME/kibana-daemon.rb"
@@ -74,41 +55,21 @@ case "$1" in
    start)
      log_daemon_msg "Starting $DESC"
      # Start Daemon
-     start-stop-daemon --start -b -d "$KIBANA_HOME" --pidfile "$PID_FILE" --exec "$DAEMON $DAEMON_OPTS start"
+     $DAEMON $DAEMON_OPTS start
      if  [[ $? -eq 0 ]]; then
        log_end_msg 0
      fi
    ;;    
    stop)
       log_daemon_msg "Stopping $DESC"
-
-      set +e
-
+      # Stop Daemon
       if [ -f "$PID_FILE" ]; then 
-
-        start-stop-daemon --start -b -d "$KIBANA_HOME" --pidfile "$PID_FILE" --exec "$DAEMON $DAEMON_OPTS stop"
-         if [ $? -eq 1 ]; then
-            log_progress_msg "$DESC is not running but pid file exists, cleaning up"
-         elif [ $? -eq 3 ]; then
-            PID="`cat $PID_FILE`"
-            log_failure_msg "Failed to stop $DESC (pid $PID)"
-            exit 1
-         fi
-
-         rm -f "$PID_FILE"
-      else
-         log_progress_msg "(not running)"
+        $DAEMON $DAEMON_OPTS stop
+        log_end_msg 0
       fi
-
-      log_end_msg 0
-      set -e
    ;;
    status)
-      set +e
-
-      start-stop-daemon --start -b -d "$KIBANA_HOME" --pidfile "$PID_FILE" --exec "$DAEMON $DAEMON_OPTS status"
-
-      set -e
+      $DAEMON $DAEMON_OPTS status
    ;;
    restart|force-reload)
       if [ -f "$PID_FILE" ]; then
@@ -119,7 +80,7 @@ case "$1" in
       $0 start
    ;;
    *)
-      log_success_msg "Usage: $0 {start|stop|restart|force-reload|status}"
+      log_success_msg "Usage: $0 {start|stop|restart|status}"
       exit 1
    ;;
 esac

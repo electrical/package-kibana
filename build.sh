@@ -7,6 +7,8 @@ os=$1
 # your name
 maintainer=$2
 
+echo "Building Kibana package for $os with maintainer '$maintainer'"
+
 if [[ $os == "centos" ]]; then
 
   # Create required directories
